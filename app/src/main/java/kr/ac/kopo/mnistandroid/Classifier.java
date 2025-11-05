@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
+import android.util.Log;
 import android.util.Pair;
 
 import org.tensorflow.lite.Interpreter;
@@ -15,6 +16,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 
 public class Classifier {
+    private static final String TAG = "Classifier";
     private static final String MODEL_NAME = "mnist_model.tflite";
 
     private final Context context;
@@ -29,24 +31,35 @@ public class Classifier {
         this.context = context;
     }
 
-    private ByteBuffer loadModelFile(String modelName) throws IOException {
-        AssetManager assetManager = context.getAssets();
-        AssetFileDescriptor fileDescriptor = assetManager.openFd(modelName);
-        FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
-        FileChannel fileChannel = inputStream.getChannel();
-        long startOffset = fileDescriptor.getStartOffset();
-        long declaredLength = fileDescriptor.getDeclaredLength();
-        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
+    public void init() throws IOException {
+        try {
+            ByteBuffer modelBuffer = loadModelFile(MODEL_NAME);
+            modelBuffer.order(ByteOrder.nativeOrder());
+
+            Interpreter.Options options = new Interpreter.Options();
+            interpreter = new Interpreter(modelBuffer, options);
+
+            initModelShape();
+            Log.d(TAG, "Model initialized successfully");
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to initialize model", e);
+            throw e;
+        }
     }
 
-    public void init() throws IOException {
-        ByteBuffer modelBuffer = loadModelFile(MODEL_NAME);
-        modelBuffer.order(ByteOrder.nativeOrder());
+    private ByteBuffer loadModelFile(String modelName) throws IOException {
+        AssetManager assetManager = context.getAssets();
+        try (AssetFileDescriptor fileDescriptor = assetManager.openFd(modelName);
+             FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
+             FileChannel fileChannel = inputStream.getChannel()) {
 
-        Interpreter.Options options = new Interpreter.Options();
-        interpreter = new Interpreter(modelBuffer, options);
-
-        initModelShape();
+            long startOffset = fileDescriptor.getStartOffset();
+            long declaredLength = fileDescriptor.getDeclaredLength();
+            return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
+        } catch (IOException e) {
+            Log.e(TAG, "Model file not found or unreadable: " + modelName, e);
+            throw e;
+        }
     }
 
     private void initModelShape() {
@@ -56,7 +69,6 @@ public class Classifier {
             modelInputHeight = inputShape[2];
             modelInputChannel = inputShape[3];
         } else {
-            // fallback for shape [1, 28, 28]
             modelInputWidth = inputShape[1];
             modelInputHeight = inputShape[2];
             modelInputChannel = 1;
@@ -64,6 +76,9 @@ public class Classifier {
 
         int[] outputShape = interpreter.getOutputTensor(0).shape(); // [1, num_classes]
         modelOutputClasses = outputShape[1];
+
+        Log.d(TAG, "Model input shape: " + modelInputWidth + "x" + modelInputHeight + "x" + modelInputChannel);
+        Log.d(TAG, "Model output classes: " + modelOutputClasses);
     }
 
     private Bitmap resizeBitmap(Bitmap bitmap) {
@@ -102,9 +117,15 @@ public class Classifier {
     }
 
     public Pair<Integer, Float> classify(Bitmap image) {
+        if (interpreter == null) {
+            Log.e(TAG, "Interpreter is not initialized");
+            return new Pair<>(-1, 0f);
+        }
+
         Bitmap resized = resizeBitmap(image);
         ByteBuffer inputBuffer = convertBitmapToGrayByteBuffer(resized);
         float[][] output = new float[1][modelOutputClasses];
+
         interpreter.run(inputBuffer, output);
         return argmax(output[0]);
     }

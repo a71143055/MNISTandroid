@@ -18,6 +18,7 @@ import java.util.Locale;
 public class DrawActivity extends AppCompatActivity {
 
     private Classifier cls;
+    private static final String TAG = "DrawActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,26 +36,39 @@ public class DrawActivity extends AppCompatActivity {
             drawView.setColor(Color.WHITE);
         }
 
+        cls = new Classifier(this);
+        try {
+            cls.init();
+            Log.d(TAG, "Classifier initialized successfully");
+        } catch (IOException ioe) {
+            Log.e(TAG, "Failed to initialize Classifier", ioe);
+            cls = null;
+        }
+
         if (classifyBtn != null && resultView != null && drawView != null) {
             classifyBtn.setOnClickListener(v -> {
+                if (cls == null) {
+                    resultView.setText("Classifier 초기화 실패");
+                    Log.e(TAG, "Classifier is null");
+                    return;
+                }
+
                 Bitmap image = drawView.getBitmap();
-                if (cls != null) {
+
+                try {
                     Pair<Integer, Float> res = cls.classify(image);
                     String outStr = String.format(Locale.ENGLISH, "%d, %.0f%%", res.first, res.second * 100.0f);
                     resultView.setText(outStr);
+                    Log.d(TAG, "Classification result: " + outStr);
+                } catch (Exception e) {
+                    resultView.setText("분류 중 오류 발생");
+                    Log.e(TAG, "Error during classification", e);
                 }
             });
         }
 
         if (clearBtn != null && drawView != null) {
             clearBtn.setOnClickListener(v -> drawView.clearCanvas());
-        }
-
-        cls = new Classifier(this);
-        try {
-            cls.init();
-        } catch (IOException ioe) {
-            Log.e("DigitClassifier", "Failed to initialize Classifier", ioe);
         }
     }
 

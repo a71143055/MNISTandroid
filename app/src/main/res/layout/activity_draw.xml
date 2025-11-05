@@ -5,45 +5,49 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".DrawActivity">
+
     <com.divyanshu.draw.widget.DrawView
         android:id="@+id/drawView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintTop_toTopOf="parent"
-        >
-    </com.divyanshu.draw.widget.DrawView>
+        app:layout_constraintBottom_toTopOf="@id/buttonLayout" />
+
     <LinearLayout
         android:id="@+id/buttonLayout"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
+        android:gravity="center"
         app:layout_constraintTop_toBottomOf="@id/drawView"
         app:layout_constraintBottom_toTopOf="@id/resultView"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        >
+        app:layout_constraintEnd_toEndOf="parent">
+
         <Button
             android:id="@+id/classifyBtn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Classify"
-            />
+            android:text="Classify" />
+
         <Button
+            android:id="@+id/clearBtn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/clearBtn"
             android:text="Clear"
-            android:layout_marginStart="10dp"/>
+            android:layout_marginStart="10dp" />
     </LinearLayout>
+
     <TextView
         android:id="@+id/resultView"
-        android:layout_height="wrap_content"
         android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:text="Result"
+        android:textSize="24sp"
         app:layout_constraintTop_toBottomOf="@id/buttonLayout"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        />
+        app:layout_constraintEnd_toEndOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>
+
